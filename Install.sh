@@ -2,7 +2,7 @@
 tput sgr0; clear
 
 ## Load Seedbox Components
-source <(wget -qO- https://raw.githubusercontent.com/jerry048/Seedbox-Components/main/seedbox_installation.sh)
+source <(wget -qO- https://raw.githubusercontent.com/xwell/Seedbox-Components/main/seedbox_installation.sh)
 # Check if Seedbox Components is successfully loaded
 if [ $? -ne 0 ]; then
 	echo "Component ~Seedbox Components~ failed to load"
@@ -87,8 +87,9 @@ if [[ "$OS" =~ "Ubuntu" ]]; then #Ubuntu 20.04+ are supported
 	fi
 fi
 
+client_max_mem=0
 ## Read input arguments
-while getopts "u:p:c:q:l:rbvx3oh" opt; do
+while getopts "u:p:c:q:l:t:m:rbvx3oh" opt; do
   case ${opt} in
 	u ) # process option username
 		username=${OPTARG}
@@ -123,6 +124,12 @@ while getopts "u:p:c:q:l:rbvx3oh" opt; do
 			warn "You must choose a qBittorrent version for your libtorrent install"
 			qb_ver_choose
 		fi
+		;;
+	t ) # tune option
+		tune_install=1
+		;;
+	m ) # set download client max memory
+		client_max_mem=${OPTARG}
 		;;
 	r ) # process option autoremove
 		autoremove_install=1
@@ -201,7 +208,7 @@ while getopts "u:p:c:q:l:rbvx3oh" opt; do
 		info "Help:"
 		info "Usage: ./Install.sh -u <username> -p <password> -c <Cache Size(unit:MiB)> -q <qBittorrent version> -l <libtorrent version> -b -v -r -3 -x -p"
 		info "Example: ./Install.sh -u jerry048 -p 1LDw39VOgors -c 3072 -q 4.3.9 -l v1.2.19 -b -v -r -3"
-		source <(wget -qO- https://raw.githubusercontent.com/jerry048/Seedbox-Components/main/Torrent%20Clients/qBittorrent/qBittorrent_install.sh)
+		source <(wget -qO- https://raw.githubusercontent.com/xwell/Seedbox-Components/main/Torrent%20Clients/qBittorrent/qBittorrent_install.sh)
 		seperator
 		info "Options:"
 		need_input "1. -u : Username"
@@ -216,13 +223,15 @@ while getopts "u:p:c:q:l:rbvx3oh" opt; do
 		need_input "Available qBittorrent versions:"
 		tput sgr0; tput setaf 7; tput dim; history -p "${lib_ver_list[@]}"; tput sgr0
 		echo -e "\n"
-		need_input "6. -r : Install autoremove-torrents"
-		need_input "7. -b : Install autobrr"
-		need_input "8. -v : Install vertex"
-		need_input "9. -x : Install BBRx"
-		need_input "10. -3 : Install BBRv3"
-		need_input "11. -p : Specify ports for qBittorrent, autobrr and vertex"
-		need_input "12. -h : Display help message"
+		need_input "6. -t : Install System Tunning"
+		need_input "7. -m : Set download client max memory"
+		need_input "8. -r : Install autoremove-torrents"
+		need_input "9. -b : Install autobrr"
+		need_input "10. -v : Install vertex"
+		need_input "11. -x : Install BBRx"
+		need_input "12. -3 : Install BBRv3"
+		need_input "13. -p : Specify ports for qBittorrent, autobrr and vertex"
+		need_input "14. -h : Display help message"
 		exit 0
 		;;
 	\? ) 
@@ -245,7 +254,7 @@ echo -e "\n"
 
 
 # qBittorrent
-source <(wget -qO- https://raw.githubusercontent.com/jerry048/Seedbox-Components/main/Torrent%20Clients/qBittorrent/qBittorrent_install.sh)
+source <(wget -qO- https://raw.githubusercontent.com/xwell/Seedbox-Components/main/Torrent%20Clients/qBittorrent/qBittorrent_install.sh)
 # Check if qBittorrent install is successfully loaded
 if [ $? -ne 0 ]; then
 	fail_exit "Component ~qBittorrent install~ failed to load"
@@ -316,7 +325,7 @@ if [[ ! -z "$qb_install" ]]; then
 	qb_install_check
 
 	## qBittorrent install
-	install_ "install_qBittorrent_ $username $password $qb_ver $lib_ver $qb_cache $qb_port $qb_incoming_port" "Installing qBittorrent" "/tmp/qb_error" qb_install_success
+	install_ "install_qBittorrent_ $username $password $qb_ver $lib_ver $qb_cache $qb_port $qb_incoming_port $client_max_mem" "Installing qBittorrent" "/tmp/qb_error" qb_install_success
 fi
 
 # autobrr Install
@@ -337,23 +346,62 @@ fi
 seperator
 
 ## Tunning
-info "Start Doing System Tunning"
-install_ tuned_ "Installing tuned" "/tmp/tuned_error" tuned_success
-install_ set_txqueuelen_ "Setting txqueuelen" "/tmp/txqueuelen_error" txqueuelen_success
-install_ set_file_open_limit_ "Setting File Open Limit" "/tmp/file_open_limit_error" file_open_limit_success
+if [[ ! -z "$tune_install" ]]; then
+	info "Start Doing System Tunning"
+	install_ tuned_ "Installing tuned" "/tmp/tuned_error" tuned_success
+	install_ set_txqueuelen_ "Setting txqueuelen" "/tmp/txqueuelen_error" txqueuelen_success
+	install_ set_file_open_limit_ "Setting File Open Limit" "/tmp/file_open_limit_error" file_open_limit_success
 
+	# Check for Virtual Environment since some of the tunning might not work on virtual machine
+	systemd-detect-virt > /dev/null
+	if [ $? -eq 0 ]; then
+		warn "Virtualization is detected, skipping some of the tunning"
+		install_ disable_tso_ "Disabling TSO" "/tmp/tso_error" tso_success
+	else
+		install_ set_disk_scheduler_ "Setting Disk Scheduler" "/tmp/disk_scheduler_error" disk_scheduler_success
+		install_ set_ring_buffer_ "Setting Ring Buffer" "/tmp/ring_buffer_error" ring_buffer_success
+	fi
+	install_ set_initial_congestion_window_ "Setting Initial Congestion Window" "/tmp/initial_congestion_window_error" initial_congestion_window_success
+	install_ kernel_settings_ "Setting Kernel Settings" "/tmp/kernel_settings_error" kernel_settings_success
+
+	## Configue Boot Script
+	info "Start Configuing Boot Script"
+	touch /root/.boot-script.sh && chmod +x /root/.boot-script.sh
+	cat << EOF > /root/.boot-script.sh
+#!/bin/bash
+sleep 120s
+source <(wget -qO- https://raw.githubusercontent.com/xwell/Seedbox-Components/main/seedbox_installation.sh)
+# Check if Seedbox Components is successfully loaded
+if [ \$? -ne 0 ]; then
+	exit 1
+fi
+set_txqueuelen_
 # Check for Virtual Environment since some of the tunning might not work on virtual machine
 systemd-detect-virt > /dev/null
-if [ $? -eq 0 ]; then
-	warn "Virtualization is detected, skipping some of the tunning"
-	install_ disable_tso_ "Disabling TSO" "/tmp/tso_error" tso_success
+if [ \$? -eq 0 ]; then
+	disable_tso_
 else
-	install_ set_disk_scheduler_ "Setting Disk Scheduler" "/tmp/disk_scheduler_error" disk_scheduler_success
-	install_ set_ring_buffer_ "Setting Ring Buffer" "/tmp/ring_buffer_error" ring_buffer_success
+	set_disk_scheduler_
+	set_ring_buffer_
 fi
-install_ set_initial_congestion_window_ "Setting Initial Congestion Window" "/tmp/initial_congestion_window_error" initial_congestion_window_success
-install_ kernel_settings_ "Setting Kernel Settings" "/tmp/kernel_settings_error" kernel_settings_success
+set_initial_congestion_window_
+EOF
+	# Configure the script to run during system startup
+	cat << EOF > /etc/systemd/system/boot-script.service
+[Unit]
+Description=boot-script
+After=network.target
 
+[Service]
+Type=simple
+ExecStart=/root/.boot-script.sh
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl enable boot-script.service
+fi
 
 
 # BBRx
@@ -370,44 +418,6 @@ fi
 if [[ ! -z "$bbrv3_install" ]]; then
 	install_ install_bbrv3_ "Installing BBRv3" "/tmp/bbrv3_error" bbrv3_install_success
 fi
-
-## Configue Boot Script
-info "Start Configuing Boot Script"
-touch /root/.boot-script.sh && chmod +x /root/.boot-script.sh
-cat << EOF > /root/.boot-script.sh
-#!/bin/bash
-sleep 120s
-source <(wget -qO- https://raw.githubusercontent.com/jerry048/Seedbox-Components/main/seedbox_installation.sh)
-# Check if Seedbox Components is successfully loaded
-if [ \$? -ne 0 ]; then
-	exit 1
-fi
-set_txqueuelen_
-# Check for Virtual Environment since some of the tunning might not work on virtual machine
-systemd-detect-virt > /dev/null
-if [ \$? -eq 0 ]; then
-	disable_tso_
-else
-	set_disk_scheduler_
-	set_ring_buffer_
-fi
-set_initial_congestion_window_
-EOF
-# Configure the script to run during system startup
-cat << EOF > /etc/systemd/system/boot-script.service
-[Unit]
-Description=boot-script
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/root/.boot-script.sh
-RemainAfterExit=true
-
-[Install]
-WantedBy=multi-user.target
-EOF
-    systemctl enable boot-script.service
 
 
 seperator
