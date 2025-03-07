@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 tput sgr0; clear
 
 ## Load Seedbox Components
