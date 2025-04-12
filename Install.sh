@@ -111,7 +111,7 @@ fi
 
 client_max_mem=0
 ## Read input arguments
-while getopts "u:p:c:q:l:t:m:rbvx3ohW:I:" opt; do
+while getopts "u:p:c:q:l:tm:rbvx3ohW:I:" opt; do
   case ${opt} in
 	u ) # process option username
 		username=${OPTARG}
