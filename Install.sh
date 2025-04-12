@@ -1,12 +1,34 @@
 #!/bin/bash
 tput sgr0; clear
 
-## Load Seedbox Components
-source <(wget -qO- https://raw.githubusercontent.com/xwell/Seedbox-Components/main/seedbox_installation.sh)
-# Check if Seedbox Components is successfully loaded
+## define constants
+SEEDBOX_SCRIPT_URL="https://raw.githubusercontent.com/xwell/Seedbox-Components/main/seedbox_installation.sh"
+SCRIPT_LOCAL_DIR="/root/.tune"
+LOCAL_SCRIPT="${SCRIPT_LOCAL_DIR}/seedbox_installation.sh"
+
+## make .tune directory for storing local scripts
+mkdir -p ${SCRIPT_LOCAL_DIR}
+
+## download Seedbox components to local and load
+if [ -f "$LOCAL_SCRIPT" ] && [ -s "$LOCAL_SCRIPT" ]; then
+    source "$LOCAL_SCRIPT"
+    if [ $? -ne 0 ]; then
+        echo "local script loading failed, trying to load from network"
+        wget -qO "$LOCAL_SCRIPT" ${SEEDBOX_SCRIPT_URL}
+        chmod +x "$LOCAL_SCRIPT"
+        source "$LOCAL_SCRIPT"
+    fi
+else
+    echo "local script does not exist, downloading..."
+    wget -qO "$LOCAL_SCRIPT" ${SEEDBOX_SCRIPT_URL}
+    chmod +x "$LOCAL_SCRIPT"
+    source "$LOCAL_SCRIPT"
+fi
+
+# check if Seedbox components is successfully loaded
 if [ $? -ne 0 ]; then
-	echo "Component ~Seedbox Components~ failed to load"
-	echo "Check connection with GitHub"
+	echo "component ~Seedbox Components~ loading failed"
+	echo "check connection with GitHub"
 	exit 1
 fi
 
@@ -89,7 +111,7 @@ fi
 
 client_max_mem=0
 ## Read input arguments
-while getopts "u:p:c:q:l:t:m:rbvx3oh" opt; do
+while getopts "u:p:c:q:l:t:m:rbvx3ohW:I:" opt; do
   case ${opt} in
 	u ) # process option username
 		username=${OPTARG}
@@ -147,6 +169,20 @@ while getopts "u:p:c:q:l:t:m:rbvx3oh" opt; do
 	3 ) # process option bbr
 		unset bbrx_install
 		bbrv3_install=1
+		;;
+	W ) # process option qBittorrent port
+		qb_port=${OPTARG}
+		if ! [[ "$qb_port" =~ ^[0-9]+$ ]]; then
+			fail "qBittorrent port must be a number"
+			exit 1
+		fi
+		;;
+	I ) # process option qBittorrent incoming port
+		qb_incoming_port=${OPTARG}
+		if ! [[ "$qb_incoming_port" =~ ^[0-9]+$ ]]; then
+			fail "qBittorrent incoming port must be a number"
+			exit 1
+		fi
 		;;
 	o ) # process option port
 		if [[ -n "$qb_install" ]]; then
@@ -206,8 +242,8 @@ while getopts "u:p:c:q:l:t:m:rbvx3oh" opt; do
 		;;
 	h ) # process option help
 		info "Help:"
-		info "Usage: ./Install.sh -u <username> -p <password> -c <Cache Size(unit:MiB)> -q <qBittorrent version> -l <libtorrent version> -b -v -r -3 -x -p"
-		info "Example: ./Install.sh -u jerry048 -p 1LDw39VOgors -c 3072 -q 4.3.9 -l v1.2.19 -b -v -r -3"
+		info "Usage: ./Install.sh -u <username> -p <password> -c <Cache Size(unit:MiB)> -q <qBittorrent version> -l <libtorrent version> -W <qBittorrent WebUI port> -I <qBittorrent incoming port> -b -v -r -3 -x -o"
+		info "Example: ./Install.sh -u jerry048 -p 1LDw39VOgors -c 3072 -q 4.3.9 -l v1.2.19 -W 8080 -I 45000 -b -v -r -3"
 		source <(wget -qO- https://raw.githubusercontent.com/xwell/Seedbox-Components/main/Torrent%20Clients/qBittorrent/qBittorrent_install.sh)
 		seperator
 		info "Options:"
@@ -230,14 +266,16 @@ while getopts "u:p:c:q:l:t:m:rbvx3oh" opt; do
 		need_input "10. -v : Install vertex"
 		need_input "11. -x : Install BBRx"
 		need_input "12. -3 : Install BBRv3"
-		need_input "13. -p : Specify ports for qBittorrent, autobrr and vertex"
-		need_input "14. -h : Display help message"
+		need_input "13. -o : Specify ports for qBittorrent, autobrr and vertex"
+		need_input "14. -W : Specify qBittorrent WebUI port"
+		need_input "15. -I : Specify qBittorrent incoming port"
+		need_input "16. -h : Display help message"
 		exit 0
 		;;
 	\? ) 
 		info "Help:"
-		info_2 "Usage: ./Install.sh -u <username> -p <password> -c <Cache Size(unit:MiB)> -q <qBittorrent version> -l <libtorrent version> -b -v -r -3 -x -p"
-		info_2 "Example ./Install.sh -u jerry048 -p 1LDw39VOgors -c 3072 -q 4.3.9 -l v1.2.19 -b -v -r -3"
+		info_2 "Usage: ./Install.sh -u <username> -p <password> -c <Cache Size(unit:MiB)> -q <qBittorrent version> -l <libtorrent version> -W <qBittorrent WebUI port> -I <qBittorrent incoming port> -b -v -r -3 -x -o"
+		info_2 "Example ./Install.sh -u jerry048 -p 1LDw39VOgors -c 3072 -q 4.3.9 -l v1.2.19 -W 8080 -I 45000 -b -v -r -3"
 		exit 1
 		;;
 	esac
@@ -369,12 +407,51 @@ if [[ ! -z "$tune_install" ]]; then
 	touch /root/.boot-script.sh && chmod +x /root/.boot-script.sh
 	cat << EOF > /root/.boot-script.sh
 #!/bin/bash
-sleep 120s
-source <(wget -qO- https://raw.githubusercontent.com/xwell/Seedbox-Components/main/seedbox_installation.sh)
-# Check if Seedbox Components is successfully loaded
-if [ \$? -ne 0 ]; then
-	exit 1
+# network connection check
+echo "Waiting for network connection..."
+# try up to 60 times, 5 seconds apart
+for i in {1..60}; do
+    if ping -c 1 -W 1 8.8.8.8 &> /dev/null || ping -c 1 -W 1 114.114.114.114 &> /dev/null; then
+        echo "Network connected, continue..."
+        break
+    fi
+    
+    if [ $i -eq 60 ]; then
+        echo "Network connection timeout, continue..."
+    else
+        echo "Waiting for network connection, try $i/60..."
+        sleep 5
+    fi
+done
+
+# Define constants (same as parent script)
+SEEDBOX_SCRIPT_URL="${SEEDBOX_SCRIPT_URL}"
+SCRIPT_LOCAL_DIR="${SCRIPT_LOCAL_DIR}"
+LOCAL_SCRIPT="${LOCAL_SCRIPT}"
+
+# load local script
+if [ -f "\$LOCAL_SCRIPT" ] && [ -s "\$LOCAL_SCRIPT" ]; then
+	source "\$LOCAL_SCRIPT"
+	if [ \$? -ne 0 ]; then
+		echo "Failed to load local script, trying to load from network"
+		source <(wget -qO- \$SEEDBOX_SCRIPT_URL)
+		if [ \$? -ne 0 ]; then
+			echo "Failed to load required components, exiting"
+			exit 1
+		fi
+	fi
+else
+	echo "Local script does not exist, trying to load from network"
+	mkdir -p \$SCRIPT_LOCAL_DIR
+	wget -qO "\$LOCAL_SCRIPT" \$SEEDBOX_SCRIPT_URL
+	if [ \$? -eq 0 ]; then
+		source "\$LOCAL_SCRIPT"
+	else
+		echo "Failed to download script components, exiting"
+		exit 1
+	fi
 fi
+
 set_txqueuelen_
 # Check for Virtual Environment since some of the tunning might not work on virtual machine
 systemd-detect-virt > /dev/null
@@ -390,7 +467,8 @@ EOF
 	cat << EOF > /etc/systemd/system/boot-script.service
 [Unit]
 Description=boot-script
-After=network.target
+After=network.target network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
