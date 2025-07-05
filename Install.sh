@@ -121,12 +121,12 @@ while getopts "u:p:c:q:l:tm:rbvx3ohW:I:" opt; do
 		;;
 	c ) # process option cache
 		cache=${OPTARG}
-		#Check if cache is a number
+		#Check if cache is a number or -1 (for auto management)
 		while true
 		do
-			if ! [[ "$cache" =~ ^[0-9]+$ ]]; then
-				warn "Cache must be a number"
-				need_input "Please enter a cache size (in MB):"
+			if ! [[ "$cache" =~ ^(-1|[0-9]+)$ ]]; then
+				warn "Cache must be a number or -1 (for auto management)"
+				need_input "Please enter a cache size (in MB, or -1 for auto management):"
 				read cache
 			else
 				break
@@ -242,14 +242,14 @@ while getopts "u:p:c:q:l:tm:rbvx3ohW:I:" opt; do
 		;;
 	h ) # process option help
 		info "Help:"
-		info "Usage: ./Install.sh -u <username> -p <password> -c <Cache Size(unit:MiB)> -q <qBittorrent version> -l <libtorrent version> -W <qBittorrent WebUI port> -I <qBittorrent incoming port> -b -v -r -3 -x -o"
+		info "Usage: ./Install.sh -u <username> -p <password> -c <Cache Size(unit:MiB, or -1 for auto)> -q <qBittorrent version> -l <libtorrent version> -W <qBittorrent WebUI port> -I <qBittorrent incoming port> -b -v -r -3 -x -o"
 		info "Example: ./Install.sh -u jerry048 -p 1LDw39VOgors -c 3072 -q 4.3.9 -l v1.2.19 -W 8080 -I 45000 -b -v -r -3"
 		source <(wget -qO- https://raw.githubusercontent.com/xwell/Seedbox-Components/main/Torrent%20Clients/qBittorrent/qBittorrent_install.sh)
 		seperator
 		info "Options:"
 		need_input "1. -u : Username"
 		need_input "2. -p : Password"
-		need_input "3. -c : Cache Size for qBittorrent (unit:MiB)"
+		need_input "3. -c : Cache Size for qBittorrent (unit:MiB, or -1 for auto management)"
 		echo -e "\n"
 		need_input "4. -q : qBittorrent version"
 		need_input "Available qBittorrent versions:"
@@ -274,7 +274,7 @@ while getopts "u:p:c:q:l:tm:rbvx3ohW:I:" opt; do
 		;;
 	\? ) 
 		info "Help:"
-		info_2 "Usage: ./Install.sh -u <username> -p <password> -c <Cache Size(unit:MiB)> -q <qBittorrent version> -l <libtorrent version> -W <qBittorrent WebUI port> -I <qBittorrent incoming port> -b -v -r -3 -x -o"
+		info_2 "Usage: ./Install.sh -u <username> -p <password> -c <Cache Size(unit:MiB, or -1 for auto)> -q <qBittorrent version> -l <libtorrent version> -W <qBittorrent WebUI port> -I <qBittorrent incoming port> -b -v -r -3 -x -o"
 		info_2 "Example ./Install.sh -u jerry048 -p 1LDw39VOgors -c 3072 -q 4.3.9 -l v1.2.19 -W 8080 -I 45000 -b -v -r -3"
 		exit 1
 		;;
@@ -325,14 +325,14 @@ if [[ ! -z "$qb_install" ]]; then
 	#Check if cache is specified
 	if [ -z "$cache" ]; then
 		warn "Cache is not specified"
-		need_input "Please enter a cache size (in MB):"
+		need_input "Please enter a cache size (in MB, or -1 for auto management):"
 		read cache
-		#Check if cache is a number
+		#Check if cache is a number or -1 (for auto management)
 		while true
 		do
-			if ! [[ "$cache" =~ ^[0-9]+$ ]]; then
-				warn "Cache must be a number"
-				need_input "Please enter a cache size (in MB):"
+			if ! [[ "$cache" =~ ^(-1|[0-9]+)$ ]]; then
+				warn "Cache must be a number or -1 (for auto management)"
+				need_input "Please enter a cache size (in MB, or -1 for auto management):"
 				read cache
 			else
 				break
