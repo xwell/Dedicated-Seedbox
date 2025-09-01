@@ -111,7 +111,7 @@ fi
 
 client_max_mem=0
 ## Read input arguments
-while getopts "u:p:c:q:l:tm:rbvx3ohW:I:" opt; do
+while getopts "u:p:c:q:l:tm:rbvxyz3ohW:I:" opt; do
   case ${opt} in
 	u ) # process option username
 		username=${OPTARG}
@@ -165,6 +165,14 @@ while getopts "u:p:c:q:l:tm:rbvx3ohW:I:" opt; do
 	x ) # process option bbr
 		unset bbrv3_install
 		bbrx_install=1	  
+		;;
+	y ) # process option bbr
+		unset bbrv3_install
+		bbry_install=1	  
+		;;
+	z ) # process option bbr
+		unset bbrv3_install
+		bbrz_install=1	  
 		;;
 	3 ) # process option bbr
 		unset bbrx_install
@@ -265,11 +273,13 @@ while getopts "u:p:c:q:l:tm:rbvx3ohW:I:" opt; do
 		need_input "9. -b : Install autobrr"
 		need_input "10. -v : Install vertex"
 		need_input "11. -x : Install BBRx"
-		need_input "12. -3 : Install BBRv3"
-		need_input "13. -o : Specify ports for qBittorrent, autobrr and vertex"
-		need_input "14. -W : Specify qBittorrent WebUI port"
-		need_input "15. -I : Specify qBittorrent incoming port"
-		need_input "16. -h : Display help message"
+		need_input "12. -y : Install BBRy"
+		need_input "13. -z : Install BBRz"
+		need_input "14. -3 : Install BBRv3"
+		need_input "15. -o : Specify ports for qBittorrent, autobrr and vertex"
+		need_input "16. -W : Specify qBittorrent WebUI port"
+		need_input "17. -I : Specify qBittorrent incoming port"
+		need_input "18. -h : Display help message"
 		exit 0
 		;;
 	\? ) 
@@ -489,6 +499,24 @@ if [[ ! -z "$bbrx_install" ]]; then
 		warn echo "Tweaked BBR is already installed"
 	else
 		install_ install_bbrx_ "Installing BBRx" "/tmp/bbrx_error" bbrx_install_success
+	fi
+fi
+
+if [[ ! -z "$bbry_install" ]]; then
+	# Check if Tweaked BBR is already installed
+	if [[ ! -z "$(lsmod | grep bbry)" ]]; then
+		warn echo "Tweaked BBR is already installed"
+	else
+		install_ install_bbry_ "Installing BBRy" "/tmp/bbry_error" bbry_install_success
+	fi
+fi
+
+if [[ ! -z "$bbrz_install" ]]; then
+	# Check if Tweaked BBR is already installed
+	if [[ ! -z "$(lsmod | grep bbrz)" ]]; then
+		warn echo "Tweaked BBR is already installed"
+	else
+		install_ install_bbrz_ "Installing BBRz" "/tmp/bbrz_error" bbrz_install_success
 	fi
 fi
 
