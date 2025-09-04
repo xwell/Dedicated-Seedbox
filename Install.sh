@@ -454,6 +454,7 @@ else
 	echo "Local script does not exist, trying to load from network"
 	mkdir -p \$SCRIPT_LOCAL_DIR
 	wget -qO "\$LOCAL_SCRIPT" \$SEEDBOX_SCRIPT_URL
+	chmod +x "\$LOCAL_SCRIPT"
 	if [ \$? -eq 0 ]; then
 		source "\$LOCAL_SCRIPT"
 	else
