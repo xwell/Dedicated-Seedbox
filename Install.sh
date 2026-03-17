@@ -46,7 +46,7 @@ trap BLA::stop_loading_animation SIGINT
 install_() {
 info_2 "$2"
 BLA::start_loading_animation "${BLA_classic[@]}"
-$1 1> /dev/null 2> $3
+eval "$1" 1> /dev/null 2> "$3"
 if [ $? -ne 0 ]; then
 	fail_3 "FAIL" 
 else
@@ -302,7 +302,11 @@ echo -e "\n"
 
 
 # qBittorrent
-source <(wget -qO- https://raw.githubusercontent.com/xwell/Seedbox-Components/main/Torrent%20Clients/qBittorrent/qBittorrent_install.sh)
+if [ -f "./qBittorrent_install.sh" ]; then
+	source "./qBittorrent_install.sh"
+else
+	source <(wget -qO- https://raw.githubusercontent.com/xwell/Seedbox-Components/main/Torrent%20Clients/qBittorrent/qBittorrent_install.sh)
+fi
 # Check if qBittorrent install is successfully loaded
 if [ $? -ne 0 ]; then
 	fail_exit "Component ~qBittorrent install~ failed to load"
@@ -373,7 +377,7 @@ if [[ ! -z "$qb_install" ]]; then
 	qb_install_check
 
 	## qBittorrent install
-	install_ "install_qBittorrent_ $username $password $qb_ver $lib_ver $qb_cache $qb_port $qb_incoming_port $client_max_mem" "Installing qBittorrent" "/tmp/qb_error" qb_install_success
+	install_ "install_qBittorrent_ \"$username\" \"$password\" \"$qb_ver\" \"$lib_ver\" \"$qb_cache\" \"$qb_port\" \"$qb_incoming_port\" \"$client_max_mem\"" "Installing qBittorrent" "/tmp/qb_error" qb_install_success
 fi
 
 # autobrr Install
