@@ -254,18 +254,14 @@ while getopts "u:p:c:q:l:tm:rbvxyz3ohW:I:" opt; do
 		info "Example: ./Install.sh -u jerry048 -p 1LDw39VOgors -c 3072 -q 4.3.9 -l v1.2.19 -W 8080 -I 45000 -b -v -r -3"
 		source <(wget -qO- https://raw.githubusercontent.com/xwell/Seedbox-Components/main/Torrent%20Clients/qBittorrent/qBittorrent_install.sh)
 		seperator
+		show_supported_versions
+		seperator
 		info "Options:"
 		need_input "1. -u : Username"
 		need_input "2. -p : Password"
 		need_input "3. -c : Cache Size for qBittorrent (unit:MiB, or -1 for auto management)"
-		echo -e "\n"
 		need_input "4. -q : qBittorrent version"
-		need_input "Available qBittorrent versions:"
-		tput sgr0; tput setaf 7; tput dim; history -p "${qb_ver_list[@]}"; tput sgr0
-		echo -e "\n"
 		need_input "5. -l : libtorrent version"
-		need_input "Available qBittorrent versions:"
-		tput sgr0; tput setaf 7; tput dim; history -p "${lib_ver_list[@]}"; tput sgr0
 		echo -e "\n"
 		need_input "6. -t : Install System Tunning"
 		need_input "7. -m : Set download client max memory"
